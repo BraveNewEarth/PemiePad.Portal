@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PermiePad | Design from the Soil Up</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            green: '#059669',
+                            gold: '#FBBF24',
+                            dark: '#030504',
+                            forest: '#061c11'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #030504;
+            color: white;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, rgba(5, 150, 105, 0.15) 0%, rgba(3, 5, 4, 1) 70%);
+            background-attachment: fixed;
+        }
+
+        /* 3D Simulation Container */
+        .scene {
+            perspective: 1500px;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .device-wrapper {
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(20deg) rotateY(0deg) translateZ(0);
+            will-change: transform;
+            width: 700px;
+            height: 525px;
+            /* approx 4:3 aspect ratio matching mockup */
+        }
+
+        /* Front face is exactly the mock image provided */
+        .device-front {
+            position: absolute;
+            inset: 0;
+            transform: translateZ(10px);
+            backface-visibility: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .device-front img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Back face is the "rugged industrial cover" */
+        .device-back {
+            position: absolute;
+            inset: 0;
+            transform: rotateY(180deg) translateZ(10px);
+            backface-visibility: hidden;
+            background: linear-gradient(145deg, #1f2022, #0f1011);
+            border-radius: 20px;
+            border: 4px solid #000;
+            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Rugged texture elements */
+        .device-back::before {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border: 8px solid #222;
+            border-radius: 12px;
+            background: repeating-linear-gradient(45deg, #111, #111 10px, #151515 10px, #151515 20px);
+        }
+
+        .device-back::after {
+            content: 'PERMIEPAD';
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            color: #333;
+            letter-spacing: 0.5em;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-shadow: -1px -1px 0 #000, 1px 1px 0 #444;
+        }
+
+        /* Device Edge thickness */
+        .device-edge {
+            position: absolute;
+            inset: 0;
+            background: #111;
+            border-radius: 20px;
+            transform: translateZ(0px);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+        }
+
+        /* Enlagred Acorn */
+        .acorn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateZ(80px) scale(0);
+            width: 100px;
+            height: 130px;
+            z-index: 20;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .acorn-cap {
+            width: 110px;
+            height: 60px;
+            background: #3e2715;
+            border-radius: 50% 50% 10% 10% / 100% 100% 20% 20%;
+            box-shadow: inset 0 -10px 10px rgba(0, 0, 0, 0.6);
+            background-image: radial-gradient(#22150a 20%, transparent 21%);
+            background-size: 10px 10px;
+            z-index: 2;
+            position: relative;
+        }
+
+        /* Acorn stem */
+        .acorn-cap::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 25px;
+            background: #2b1a0e;
+            border-radius: 4px;
+        }
+
+        .acorn-body {
+            width: 90px;
+            height: 90px;
+            background: radial-gradient(ellipse at 30% 30%, #b8865a 0%, #5a381c 100%);
+            border-radius: 10% 10% 50% 50% / 20% 20% 80% 80%;
+            margin-top: -20px;
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+
+        /* SVG Tree that grows */
+        .tree-simulation {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, 0) translateZ(120px);
+            width: 500px;
+            height: 600px;
+            z-index: 30;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .tree-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        /* Scroll Down Indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 10vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+            z-index: 50;
+        }
+
+        .scroll-indicator.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .scroll-mouse {
+            width: 26px;
+            height: 42px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 13px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .scroll-wheel {
+            width: 4px;
+            height: 8px;
+            background: #FBBF24;
+            border-radius: 2px;
+            position: absolute;
+            top: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: scroll 1.5s infinite;
+        }
+
+        @keyframes scroll {
+            0% {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, 15px);
+                opacity: 0;
+            }
+        }
+
+        /* Content Sections */
+        .scroll-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        .section-panel {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 0 10vw;
+        }
+
+        .glass-card {
+            background: rgba(10, 15, 12, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 500px;
+        }
+
+        /* Gallery Theme White */
+        .gallery-container {
+            background: #ffffff;
+            color: #111827;
+            position: relative;
+            z-index: 40;
+            padding: 8rem 0;
+        }
+
+        .gallery-item {
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: #f9fafb;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .gallery-overlay {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        /* Hide scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #030504;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-brand-green selection:text-white">
+
+    <!-- Scroll Indicator -->
+    <div class="scroll-indicator" id="scroll-indicator">
+        <div class="scroll-mouse">
+            <div class="scroll-wheel"></div>
+        </div>
+        <span class="text-xs uppercase tracking-widest text-gray-400 font-mono mt-2">Scroll Down</span>
+    </div>
+
+    <!-- Fixed 3D Simulation Canvas -->
+    <div class="scene" id="scene">
+        <div class="device-wrapper" id="ipad">
+            <!-- Order determines layering based on Z-index via transforms -->
+            <div class="device-edge"></div>
+            <div class="device-back"></div>
+            <div class="device-front">
+                <img src="./03_FieldCapture_Mockup.png" alt="PermiePad OS UI">
+            </div>
+
+            <div class="acorn" id="seed">
+                <div class="acorn-cap"></div>
+                <div class="acorn-body"></div>
+            </div>
+
+            <!-- SVG animated tree -->
+            <div class="tree-simulation" id="tree">
+                <svg class="tree-svg" viewBox="0 0 500 600" preserveAspectRatio="none">
+                    <defs>
+                        <!-- Dynamic clip paths for growth animation -->
+                        <clipPath id="growTrunk">
+                            <rect id="trunkMask" x="0" y="600" width="500" height="0" />
+                        </clipPath>
+                    </defs>
+
+                    <!-- Glow effect -->
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+
+                    <!-- Trunk and Branches -->
+                    <g clip-path="url(#growTrunk)" stroke="#a67c52" stroke-linecap="round" stroke-linejoin="round"
+                        fill="none">
+                        <!-- Main Trunk -->
+                        <path d="M 250 600 Q 240 450 250 350" stroke-width="24" filter="url(#glow)" />
+
+                        <!-- Left Limbs -->
+                        <path d="M 250 450 Q 180 380 150 250" stroke-width="16" />
+                        <path d="M 180 340 Q 120 280 80 180" stroke-width="10" />
+                        <path d="M 220 380 Q 150 300 120 150" stroke-width="8" />
+
+                        <!-- Right Limbs -->
+                        <path d="M 250 420 Q 320 350 380 220" stroke-width="14" />
+                        <path d="M 310 320 Q 380 250 420 160" stroke-width="10" />
+                        <path d="M 250 350 Q 280 250 320 120" stroke-width="8" />
+                    </g>
+
+                    <!-- Leaf Canopy Group -->
+                    <g id="leafCanopy" opacity="0" fill="#059669" filter="url(#glow)">
+                        <circle cx="250" cy="180" r="120" opacity="0.8" />
+                        <circle cx="150" cy="220" r="90" opacity="0.7" fill="#047857" />
+                        <circle cx="350" cy="200" r="100" opacity="0.7" fill="#065f46" />
+                        <circle cx="200" cy="120" r="80" opacity="0.9" fill="#10b981" />
+                        <circle cx="300" cy="130" r="85" opacity="0.85" fill="#34d399" />
+                        <circle cx="100" cy="150" r="60" opacity="0.6" fill="#047857" />
+                        <circle cx="400" cy="140" r="70" opacity="0.6" />
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll Narrative Overlay -->
+    <main class="scroll-content" id="scrollContainer">
+        <!-- Section 0: Hero -->
+        <section class="section-panel" id="sec0">
+            <div class="glass-card">
+                <h1
+                    class="font-display font-bold text-5xl md:text-7xl tracking-tighter mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                    Design from the Soil Up
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-400 font-light leading-relaxed">
+                    Ecological Intelligence. Ultra-Rugged for the Field.
+                </p>
+                <div class="mt-8 flex gap-4">
+                    <span
+                        class="px-4 py-2 rounded-full border border-brand-green/30 bg-brand-green/10 text-brand-green text-sm font-medium tracking-wide">PERMIEPAD
+                        OS</span>
+                    <span
+                        class="px-4 py-2 rounded-full border border-white/10 bg-white/5 text-gray-300 text-sm font-medium tracking-wide">V1.0
+                        SPECS</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Field Ready -->
+        <section class="section-panel justify-end" id="sec1">
+            <div class="glass-card">
+                <h2 class="font-display font-bold text-4xl mb-4">Field-Ready. Offline-First.</h2>
+                <p class="text-lg text-gray-400 leading-relaxed">
+                    Built for the harshest environments. Your precise vector maps and GPS observations stay safe and
+                    sync safely when connectivity returns. No signal? No problem.
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 2: AI -->
+        <section class="section-panel" id="sec2">
+            <div class="glass-card border border-brand-green/20">
+                <h2 class="font-display font-bold text-4xl mb-4 text-brand-green">Permabrain AI</h2>
+                <p class="text-lg text-gray-300 leading-relaxed">
+                    Elite ecological intelligence driving your design. Instantly cross-reference Köppen climate zones,
+                    soil, water, and wind parameters to build robust guilds, straight from the seed.
+                </p>
+                <div class="mt-6 flex flex-wrap gap-2 text-xs font-mono text-brand-gold">
+                    <span class="px-2 py-1 bg-brand-gold/10 rounded">CORE_ML</span>
+                    <span class="px-2 py-1 bg-brand-gold/10 rounded">ON_DEVICE_INFERENCE</span>
+                    <span class="px-2 py-1 bg-brand-gold/10 rounded">RAG_VECTOR_DB</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Future -->
+        <section class="section-panel justify-end pb-64" id="sec3">
+            <div class="glass-card">
+                <h2 class="font-display font-bold text-4xl mb-4">Visualizing Tomorrow</h2>
+                <p class="text-lg text-gray-400 leading-relaxed">
+                    Watch ecosystems thrive before planting a single seed. See the complete lifecycle from initial
+                    observation to mature food forest, empowering full implementation.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- 2D Gallery Content (White Theme) -->
+    <div class="gallery-container px-6 md:px-12 lg:px-24">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-20 text-center">
+                <h3 class="font-display text-4xl font-black mb-4 text-gray-900 tracking-tight">The Complete Workflow
+                </h3>
+                <p class="text-gray-600 max-w-2xl mx-auto text-lg leading-relaxed">Immersive, iPad-first architecture
+                    designed for Apple Pencil. Multi-column navigation optimized for absolute field visibility.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
+                <!-- Row 1 -->
+                <div class="col-span-1 md:col-span-2 gallery-item aspect-[4/3] relative">
+                    <img src="./03_FieldCapture_Mockup.png" alt="Field Capture" class="w-full h-full object-cover">
+                    <div class="absolute bottom-0 left-0 w-full gallery-overlay px-8 py-5">
+                        <h4 class="font-display font-bold text-xl text-gray-900">SYS-01: Field Capture</h4>
+                        <p class="text-sm text-gray-600 mt-1">Offline-first vector drawing and precise GPS observation
+                            mapping securely to satellite tiles.</p>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="col-span-1 gallery-item aspect-video relative group bg-black flex flex-col justify-between">
+                    <!-- Standard YouTube Embed -->
+                    <div class="w-full h-full flex-1">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/WsfSTt3OVec"
+                            title="Promo Video 1" frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen></iframe>
+                    </div>
+                    <div
+                        class="w-full gallery-overlay px-6 py-4 absolute bottom-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <h4 class="font-display font-bold text-gray-900">Motion: Field Operations</h4>
+                    </div>
+                </div>
+
+                <div class="col-span-1 gallery-item aspect-[4/3] relative">
+                    <img src="./04_AIDesignInterview_Mockup.png" alt="AI Design Interview"
+                        class="w-full h-full object-cover object-top">
+                    <div class="absolute bottom-0 left-0 w-full gallery-overlay px-6 py-4">
+                        <h4 class="font-display font-bold text-brand-green text-lg">SYS-02: Permabrain Chat</h4>
+                        <p class="text-sm text-gray-600 mt-1">Context-aware ecological consulting.</p>
+                    </div>
+                </div>
+
+                <!-- Row 3 -->
+                <div class="col-span-1 gallery-item aspect-[4/3] relative">
+                    <img src="./05_PhotoToVision_Mockup.png" alt="Photo to Vision"
+                        class="w-full h-full object-cover object-top">
+                    <div class="absolute bottom-0 left-0 w-full gallery-overlay px-6 py-4">
+                        <h4 class="font-display font-bold text-yellow-600 text-lg">SYS-03: Vision Generation</h4>
+                        <p class="text-sm text-gray-600 mt-1">Photorealistic growth simulation.</p>
+                    </div>
+                </div>
+
+                <div class="col-span-1 gallery-item aspect-video relative group bg-black flex flex-col justify-between">
+                    <!-- Standard YouTube Embed -->
+                    <div class="w-full h-full flex-1">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/VCemeFYzz2U"
+                            title="Promo Video 2" frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen></iframe>
+                    </div>
+                    <div
+                        class="w-full gallery-overlay px-6 py-4 absolute bottom-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                        <h4 class="font-display font-bold text-gray-900">Motion: Visualizing Ecosystems</h4>
+                    </div>
+                </div>
+
+                <!-- Row 4 -->
+                <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
+                    <div class="col-span-1 gallery-item aspect-[4/3] relative">
+                        <img src="./06_SpeciesBrowser_Mockup.png" alt="Species Browser"
+                            class="w-full h-full object-cover object-top">
+                        <div class="absolute bottom-0 left-0 w-full gallery-overlay px-6 py-4">
+                            <h4 class="font-display font-bold text-gray-900 text-lg">SYS-04: Deep Database</h4>
+                            <p class="text-sm text-gray-600 mt-1">Köppen-compatible guild logic.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 gallery-item aspect-[4/3] relative group bg-black">
+                        <!-- Standard YouTube Embed -->
+                        <div class="w-full h-full">
+                            <iframe width="100%" height="100%" src="https://www.youtube.com/embed/ja--9Qzq2_E"
+                                title="Promo Video 3" frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen></iframe>
+                        </div>
+                        <div
+                            class="w-full gallery-overlay px-6 py-4 absolute bottom-0 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                            <h4 class="font-display font-bold text-gray-900">Motion: The Final Plan</h4>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mt-32 border-t border-gray-200 pt-16 flex flex-col items-center justify-center text-center">
+                <div class="h-12 w-12 rounded-full bg-brand-green flex items-center justify-center mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+                        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+                    </svg>
+                </div>
+                <h5 class="font-display font-bold text-3xl tracking-widest text-gray-900 mb-3">PERMIEPAD</h5>
+                <p class="text-gray-500 font-light text-lg">See the land. Design the future. Heal the Earth.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GSAP / ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Hide scroll indicator on first scroll
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                document.getElementById('scroll-indicator').classList.add('hidden');
+            }
+        }, { once: true });
+
+        // Responsive handling for 3D elements
+        function getResponsiveValues() {
+            const width = window.innerWidth;
+            if (width < 768) {
+                return { deviceScale: 0.4, yOffset: -50 };
+            } else if (width < 1024) {
+                return { deviceScale: 0.7, yOffset: 0 };
+            }
+            return { deviceScale: 1, yOffset: 0 };
+        }
+
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "body",
+                start: "top top",
+                end: "bottom top",
+                endTrigger: ".scroll-content",
+                scrub: 1.5,
+                pin: "#scene",
+                invalidateOnRefresh: true
+            }
+        });
+
+        const rVals = getResponsiveValues();
+        gsap.set("#ipad", { scale: rVals.deviceScale, y: rVals.yOffset });
+
+        /* Sequence 1: Rotation to show Rugged Back, then Laying Flat */
+        tl.to("#ipad", {
+            rotateY: 180, // Show backface
+            duration: 1.5,
+            ease: "power2.inOut"
+        }, 0)
+            .to("#ipad", {
+                rotateY: 360, // Rotate back to front
+                duration: 1.5,
+                ease: "power2.inOut"
+            }, 1.5)
+            .to("#ipad", {
+                rotateX: 70, // Lay flat
+                rotateZ: 0,
+                y: rVals.yOffset + 200, // Move down
+                duration: 1,
+                ease: "power2.inOut"
+            }, 3.0)
+
+            /* Sequence 2: Huge Acorn Drops In, device sinks */
+            .to("#seed", {
+                opacity: 1,
+                scale: 1,
+                duration: 0.5,
+                ease: "bounce.out(1.5)"
+            }, 3.8)
+            .to("#ipad", {
+                y: rVals.yOffset + 500, // Sink deeply into "soil"
+                rotateX: 85,
+                opacity: 0.1,
+                duration: 3,
+                ease: "none"
+            }, 4.2)
+            .to("#seed", {
+                y: "+=150", // Follow slightly
+                scale: 1.5, // Swell before sprouting
+                duration: 2,
+                ease: "power1.inOut"
+            }, 4.2)
+
+            /* Sequence 3: Massive Tree Growth (Organic trunk + leaves) */
+            .to("#tree", {
+                opacity: 1,
+                duration: 0.1
+            }, 5.5)
+            .to("#seed", {
+                opacity: 0, // Acorn gives way to tree
+                duration: 0.5
+            }, 5.5)
+            /* Grow Trunk mask from y=600 to y=0 (bottom to top) */
+            .to("#trunkMask", {
+                attr: { y: 0, height: 600 },
+                duration: 3,
+                ease: "power3.inOut"
+            }, 5.5)
+            /* Pop leaves */
+            .to("#leafCanopy", {
+                opacity: 1,
+                duration: 0.2
+            }, 7.5)
+            .fromTo("#leafCanopy circle", {
+                scale: 0,
+                transformOrigin: "center center"
+            }, {
+                scale: 1,
+                duration: 1.5,
+                stagger: 0.1,
+                ease: "elastic.out(1, 0.5)"
+            }, 7.5);
+
+        // Fade out scene entirely before entering gallery
+        gsap.to("#scene", {
+            scrollTrigger: {
+                trigger: ".gallery-container",
+                start: "top 90%",
+                end: "top 30%",
+                scrub: true
+            },
+            opacity: 0,
+            y: -100
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            const vals = getResponsiveValues();
+            gsap.set("#ipad", { scale: vals.deviceScale });
+            ScrollTrigger.refresh();
+        });
+    </script>
+</body>
+
+</html>
